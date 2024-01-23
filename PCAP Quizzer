@@ -1,1 +1,178 @@
-Here will be my first programming project.
+import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QTextCursor
+from PyQt5.uic import loadUi
+from PyQt5 import QtCore, QtWidgets
+import random
+from question_bank import pcap_questions
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(800, 600)
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.next_button = QtWidgets.QPushButton(self.centralwidget)
+        self.next_button.setGeometry(QtCore.QRect(480, 470, 75, 23))
+        self.next_button.setObjectName("next_button")
+        self.previous_button = QtWidgets.QPushButton(self.centralwidget)
+        self.previous_button.setGeometry(QtCore.QRect(230, 470, 75, 23))
+        self.previous_button.setObjectName("previous_button")
+        self.question = QtWidgets.QLabel(self.centralwidget)
+        self.question.setGeometry(QtCore.QRect(60, 40, 651, 231))
+        self.question.setObjectName("question")
+        self.copyright_label = QtWidgets.QLabel(self.centralwidget)
+        self.copyright_label.setGeometry(QtCore.QRect(680, 540, 121, 20))
+        self.copyright_label.setObjectName("copyright_label")
+        self.radio_button_a = QtWidgets.QRadioButton(self.centralwidget)
+        self.radio_button_a.setGeometry(QtCore.QRect(230, 300, 370, 30))
+        self.radio_button_a.setObjectName("radio_button_a")
+        self.radio_button_b = QtWidgets.QRadioButton(self.centralwidget)
+        self.radio_button_b.setGeometry(QtCore.QRect(230, 340, 370, 30))
+        self.radio_button_b.setObjectName("radio_button_b")
+        self.radio_button_c = QtWidgets.QRadioButton(self.centralwidget)
+        self.radio_button_c.setGeometry(QtCore.QRect(230, 380, 370, 30))
+        self.radio_button_c.setObjectName("radio_button_c")
+        self.radio_button_d = QtWidgets.QRadioButton(self.centralwidget)
+        self.radio_button_d.setGeometry(QtCore.QRect(230, 420, 370, 30))
+        self.radio_button_d.setObjectName("radio_button_d")
+        self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
+        self.progressBar.setGeometry(QtCore.QRect(0, 540, 118, 23))
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName("progressBar")
+        self.timer_label = QtWidgets.QLabel(self.centralwidget)
+        self.timer_label.setGeometry(QtCore.QRect(730, 0, 60, 20))
+        self.timer_label.setObjectName("timer_label")
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.menubar = QtWidgets.QMenuBar(MainWindow)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
+        self.menubar.setObjectName("menubar")
+        self.menuPCAP_Quizzer = QtWidgets.QMenu(self.menubar)
+        self.menuPCAP_Quizzer.setObjectName("menuPCAP_Quizzer")
+        MainWindow.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar.setObjectName("statusbar")
+        MainWindow.setStatusBar(self.statusbar)
+        self.menubar.addAction(self.menuPCAP_Quizzer.menuAction())
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.next_button.setText(_translate("MainWindow", "Next"))
+        self.previous_button.setText(_translate("MainWindow", "Previous"))
+        self.question.setText(_translate("MainWindow", "                          question"))
+        self.copyright_label.setText(_translate("MainWindow", "(c) Hauke Juri Schnepel"))
+        self.radio_button_a.setText(_translate("MainWindow", "RadioButton"))
+        self.radio_button_b.setText(_translate("MainWindow", "RadioButton"))
+        self.radio_button_c.setText(_translate("MainWindow", "RadioButton"))
+        self.radio_button_d.setText(_translate("MainWindow", "RadioButton"))
+        self.timer_label.setText(_translate("MainWindow", "TextLabel"))
+        self.menuPCAP_Quizzer.setTitle(_translate("MainWindow", "PCAP Quizzer"))
+
+class QuizApp(QMainWindow):
+    def __init__(self, questions):
+        super(QuizApp, self).__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.question_bank = questions
+        self.questions = random.sample(self.question_bank, 10)  # Randomly select n questions from the question databank
+        self.current_question_index = 0
+        self.answers = []
+        self.remaining_time = (len(questions) * 90)  # 90 seconds time per question
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_timer)
+        self.ui.progressBar.setValue(0)
+
+        # Connect Next / Previous buttons to functions
+        self.ui.next_button.clicked.connect(self.next_question)
+        self.ui.previous_button.clicked.connect(self.prev_question)
+
+        self.ui.next_button.clicked.connect(self.update_progress)
+        self.ui.previous_button.clicked.connect(self.update_progress)
+
+        self.start_quiz()
+
+    def start_quiz(self):
+        '''Shuffles the questions to give a new, random order every time'''
+        random.shuffle(self.questions) # Redundant?
+        self.show_question()
+
+    def show_question(self):
+        '''Presents the current questions by updating existing labels'''
+        question = self.questions[self.current_question_index]
+        self.ui.question.setText(f"{self.current_question_index + 1}. {question['question']}")
+
+        options = random.sample(question['options'], len(question['options']))
+        
+        # Update radio buttons and set text directly from the question's options
+        for i, option in enumerate(options, start=65):
+            radio_button = getattr(self.ui, f"radio_button_{chr(i+32)}")
+            radio_button.setText(option)
+
+        # Hide previous button on the first question and next button on the last to avoid going out of bounds
+        if self.current_question_index == 0:
+            self.ui.previous_button.hide()
+        else:
+            self.ui.previous_button.show()
+
+        if self.current_question_index == len(self.questions) - 1:
+            self.ui.next_button.hide()
+        else:
+            self.ui.next_button.show()
+
+        self.timer.start(1000)  # Update timer every second
+
+    def next_question(self):
+        '''Goes to the previous question; updates current question index'''
+        self.timer.stop()
+        # TO DO: Add logic to handle user's answer
+        # ...
+
+        self.current_question_index += 1
+        if self.current_question_index < len(self.questions):
+            self.show_question()
+        else:
+            self.show_results()
+
+    def prev_question(self):
+        '''Goes to the next question; updates current question index'''
+        self.timer.stop()
+        self.current_question_index -= 1
+        if self.current_question_index >= 0:
+            self.show_question()
+
+    def update_timer(self):
+        '''Updates the timer every second'''
+        if self.remaining_time > 0:
+            self.remaining_time -= 1
+            minutes, seconds = divmod(self.remaining_time, 60)
+            self.ui.timer_label.setText(f"Time: {minutes:02d}:{seconds:02d}")
+        else:
+            self.timer.stop()
+            self.show_results()
+
+    
+    def update_progress(self):
+        '''Updates the progress bar based on the current question'''
+        self.ui.progressBar.setValue(int(self.current_question_index / len(self.question_bank) * 100))  # 2.5% per question assuming 40 total     
+
+
+    def show_results(self):
+        # TO DO: Display results
+        ...
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    # Your larger question bank
+    question_bank = pcap_questions
+    quiz_app = QuizApp(question_bank)
+    quiz_app.show()
+    sys.exit(app.exec_())
